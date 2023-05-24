@@ -14,7 +14,7 @@ round_numbers = 5  # сколько чисел после запятой выв�
 # sort_by_total = True  # вывод будет начинаться с кошелька с наибольшй суммой
 check_native_token = True  # показывать нативный токены сети True - да / False - нет
 output_zero_balance = False  # выводить пустые баланы (True - да, False - нет)
-output_in_file = "bala.txt" # "" - вывод будет в терминал | "name.txt" вывов в файл name.txt
+# output_in_file = "" # "" - вывод будет в терминал | "name.txt" вывов в файл name.txt
 ##############
 
 
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     for i in tqdm(public_keys, desc="Fetching balances", unit="wallet"):
         balance_of_wallet = collect_balance_one_address()
         total_on_wallets += balance_of_wallet[1]["total"]
-        balances[i] = collect_balance_one_address()
-    output_balances(balances, output_in_file)
+        balances[i] = balance_of_wallet
+    output_balances(balances)
     print(f"Всего на кошельках {round(total_on_wallets,round_numbers)}$")
     output_total_coins(collect_all_coins(balances))
