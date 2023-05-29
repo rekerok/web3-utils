@@ -1,0 +1,7 @@
+/venv
+/__pycache__
+private.txt
+public.txt
+shuffle_pr_wallet.txt
+private_public.txt
+wallet.xlsx
