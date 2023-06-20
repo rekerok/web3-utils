@@ -11,10 +11,8 @@ colorama.init(autoreset=True)
 ### CONFIG ###
 view_more_than = 0  # показать балансы монет где больше чем это число (usdt)
 round_numbers = 4  # сколько чисел после запятой выводить
-# sort_by_total = True  # вывод будет начинаться с кошелька с наибольшй суммой
 check_native_token = True  # показывать нативный токены сети True - да / False - нет
 output_zero_balance = False  # выводить пустые баланы (True - да, False - нет)
-# output_in_file = "" # "" - вывод будет в терминал | "name.txt" вывов в файл name.txt
 ##############
 
 
@@ -76,6 +74,10 @@ def collect_balance_one_address():
 def get_price_token(symbol):
     for i in prices_all_tokens:
         if i["currency_pair"] == f"{symbol}_USD":
+            return i["last"]
+        if i["currency_pair"] == f"{symbol}_USDT":
+            return i["last"]
+        if i["currency_pair"] == f"{symbol}_USDC":
             return i["last"]
     return 0
 
