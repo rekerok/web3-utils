@@ -5,6 +5,7 @@ from config_networks import coins
 from tqdm import tqdm
 from tabulate import tabulate
 import colorama
+import openpyxl
 
 colorama.init(autoreset=True)
 
@@ -12,7 +13,8 @@ colorama.init(autoreset=True)
 view_more_than = 0  # показать балансы монет где больше чем это число (usdt)
 round_numbers = 4  # сколько чисел после запятой выводить
 check_native_token = True  # показывать нативный токены сети True - да / False - нет
-output_zero_balance = False  # выводить пустые баланы (True - да, False - нет)
+output_zero_balance = True  # выводить пустые баланы (True - да, False - нет)
+output_in_excel = True
 ##############
 
 
@@ -84,44 +86,77 @@ def get_price_token(symbol):
 
 def output_balances(balances, filename=""):
     count = 1
-    if not filename:
+    print("=" * 15)
+    for wallet, networks in balances.items():
+        if round(networks[1]["total"], round_numbers) == 0:
+            continue
+        print(f"{count}) {wallet}")
+        for network, coins in networks[0].items():
+            print(network)
+            for key, value in coins.items():
+                if not output_zero_balance and value["amount"] == 0.0:
+                    continue
+                if value["usdt"] >= view_more_than:
+                    print(
+                        f"\t{key.ljust(6)}{str(round(value['amount'],round_numbers))} | {round(value['usdt'],round_numbers)}$"
+                    )
+        print(f"На кошельке {round(networks[1]['total'],round_numbers)}$")
+        count += 1
         print("=" * 15)
-        for wallet, networks in balances.items():
-            if round(networks[1]["total"], round_numbers) == 0:
-                continue
-            print(f"{count}) {wallet}")
-            for network, coins in networks[0].items():
-                print(network)
-                for key, value in coins.items():
-                    if not output_zero_balance and value["amount"] == 0.0:
-                        continue
-                    if value["usdt"] >= view_more_than:
-                        print(
-                            f"\t{key.ljust(6)}{str(round(value['amount'],round_numbers))} | {round(value['usdt'],round_numbers)}$"
-                        )
-            print(f"На кошельке {round(networks[1]['total'],round_numbers)}$")
-            count += 1
-            print("=" * 15)
-    else:
-        with open(filename, "w") as file:
-            file.write("=" * 15 + "\n")
-            count = 1
-            for wallet, networks in balances.items():
-                file.write(f"{count}) {wallet}\n")
-                for network, coins in networks[0].items():
-                    file.write(network + "\n")
-                    for key, value in coins.items():
-                        if not output_zero_balance and value["amount"] == 0.0:
-                            continue
-                        if value["usdt"] >= view_more_than:
-                            file.write(
-                                f"\t{key.ljust(6)}{str(round(value['amount'], round_numbers))} | {round(value['usdt'], round_numbers)}$\n"
-                            )
-                file.write(
-                    f"На кошельке {round(networks[1]['total'], round_numbers)}$\n"
-                )
-                count += 1
-                file.write("=" * 15 + "\n")
+
+
+def tmp(balances):
+    network_coins = {}
+
+    for wallet, networks in balances.items():
+        for network, coins in networks[0].items():
+            if network not in network_coins:
+                network_coins[network] = []
+            network_coins[network].extend(coins.keys())
+    for network in network_coins:
+        network_coins[network] = list(set(network_coins[network]))
+
+    return network_coins
+
+
+def output_in_excel(balances):
+    pprint.pprint(balances)
+    book = openpyxl.Workbook()
+    sheet = book.active
+    netw_coin = tmp(balances)
+    print(netw_coin)
+    start_row = 1
+    start_colm = 2
+    for network, coin in netw_coin.items():
+        sheet.cell(start_row, start_colm).value = network
+        sheet.merge_cells(
+            start_row=start_row,
+            start_column=start_colm,
+            end_row=start_row,
+            end_column=start_colm + len(coin) - 1,
+        )
+        sheet
+        start_colm += len(coin)
+
+    start_row = 2
+    start_colm = 2
+    for network, coins in netw_coin.items():
+        for coin in coins:
+            sheet.cell(start_row, start_colm).value = coin
+            start_colm += 1
+
+    start_row = 3
+    start_colm = 1
+    for wallet, networks in balances.items():
+        tuple_balance = [wallet]
+        for network, coins in networks[0].items():
+            for key, value in coins.items():
+                tuple_balance.append(value["amount"])
+        for i, value in enumerate(tuple_balance, start=1):
+            
+            sheet.cell(row=start_row, column=i).value = value
+        start_row += 1
+    book.save("test.xlsx")
 
 
 def output_total_coins(coin_totals):
@@ -139,52 +174,6 @@ def round_values(data):
     return rounded_data
 
 
-def remove_duplicates(data):
-    cleaned_data = []
-    unique_addresses = set()
-    for item in data:
-        address = item[0]
-        network = item[1]
-        if (address, network) not in unique_addresses:
-            unique_addresses.add((address, network))
-            cleaned_data.append(item)
-        else:
-            item[1] = ""  # Замена сети на пустую строку
-            cleaned_data.append(item)
-    return remove_duplicates_adress(cleaned_data)
-
-
-def remove_duplicates_adress(data):
-    unique_addresses = set()
-    cleaned_data = []
-    for item in data:
-        address = item[0]
-        if address not in unique_addresses:
-            unique_addresses.add(address)
-            cleaned_data.append(item)
-        else:
-            item[0] = ""  # Замена адреса на пустую строку
-            cleaned_data.append(item)
-    return cleaned_data
-
-
-# def get_tabulate(balances):
-#     data = list()
-#     for wallet, networks in balances.items():
-#         tokens = list()
-#         for network, coins in networks[0].items():
-#             for symbol, value in coins.items():
-#                 data.append([wallet, network, symbol, value["amount"], value["usdt"]])
-#     # print(data)
-#     headers = ["Wallet", "Network", "Token", "Amount", "USDT"]
-#     print(data)
-#     print(
-#         tabulate(
-#             remove_duplicates(round_values(data)), headers=headers, tablefmt="grid"
-#         )
-#     )
-
-
 if __name__ == "__main__":
     prices_all_tokens = requests.get("https://api.gateio.ws/api/v4/spot/tickers").json()
     with open("./public.txt", "r") as wallets_txt:
@@ -196,6 +185,7 @@ if __name__ == "__main__":
         balance_of_wallet = collect_balance_one_address()
         total_on_wallets += balance_of_wallet[1]["total"]
         balances[i] = balance_of_wallet
-    output_balances(balances)
-    print(f"Всего на кошельках {round(total_on_wallets,round_numbers)}$")
-    output_total_coins(collect_all_coins(balances))
+    output_in_excel(balances)
+    # output_balances(balances)
+    # print(f"Всего на кошельках {round(total_on_wallets,round_numbers)}$")
+    # output_total_coins(collect_all_coins(balances))
